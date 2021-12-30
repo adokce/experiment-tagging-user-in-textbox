@@ -198,7 +198,7 @@ const Mention = ({ attributes, children, element }) => {
     <span
       {...attributes}
       contentEditable={false}
-      data-cy={`mention-${element.character.replace(" ", "-")}`}
+      // data-cy={`mention-${element.character.replace(" ", "-")}`}
       style={{
         padding: "3px 3px 2px",
         margin: "0 1px",
