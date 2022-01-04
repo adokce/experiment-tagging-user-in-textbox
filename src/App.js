@@ -1,151 +1,176 @@
-// @refresh reset
+import { ReactRenderer, useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Mention from "@tiptap/extension-mention";
 
-// Goal:
-// Make a textbox/textarea in which you can tag (@Name) people
-// After submitting the text, have an option to highlight the tag and click on it
+import tippy from "tippy.js";
+// import { MentionList } from './MentionList'
 
-import { useCallback, useMemo, useState } from "react";
-import { createEditor, Editor, Range } from "slate";
-import { Slate, Editable, withReact } from "slate-react";
-import MentionExample from "./MentionExample";
+import React, {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle
+} from "react";
+// import './MentionList.scss'
 
-const SlateComponent = () => {
-  const [value, setValue] = useState([
-    {
-      type: "paragraph",
-      children: [{ text: "1 line in paragraph" }]
-    },
-    {
-      type: "paragraph",
-      children: [{ text: "2 line in paragraph" }]
-    },
-    {
-      type: "paragraph",
-      children: [{ text: "3 line in paragraph" }]
-    },
-    {
-      type: "paragraph",
-      children: [{ text: "GO" }]
-    }
-  ]);
-  const editor = useMemo(() => withReact(createEditor()), []);
-
-  const [target, setTarget] = useState();
-  const [index, setIndex] = useState(0);
-  const [search, setSearch] = useState("");
-
-  const renderElement = (props) => {
-    const { attributes, children, element } = props;
-
-    return <div {...attributes}>{children}</div>;
-  };
-
-  const onKeyDown = useCallback((e) => {}, []);
-
-  const onChange = (value) => {
-    setValue(value);
-
-    const { selection } = editor;
-
-    // Don't understand this. Here's from docs
-    // Whether the range is collapsed.
-    // A range is considered "collapsed" when the
-    // anchor point and focus point of the range are the same.
-    const isRangeCollapsed = Range.isCollapsed(selection);
-
-    if (isRangeCollapsed) {
-      const [start] = Range.edges(selection);
-      const wordBefore = Editor.before(editor, start, { unit: "word" });
-      const before = wordBefore && Editor.before(editor, wordBefore);
-      const beforeRange = before && Editor.range(editor, before, start);
-      const beforeText = beforeRange && Editor.string(editor, beforeRange);
-      const beforeMatch = beforeText && beforeText.match(/^@(\w+)$/);
-
-      const after = Editor.after(editor, start);
-      // console.log({ after });
-
-      const afterRange = Editor.range(editor, start, after);
-      // console.log({ afterRange });
-
-      const afterText = Editor.string(editor, afterRange);
-      // console.log({ afterText });
-
-      const afterMatch = afterText.match(/^(\s|$)/);
-      console.log({ beforeMatch, afterMatch });
-
-      if (beforeMatch && afterMatch) {
-        setTarget(beforeRange);
-        setSearch(beforeMatch[1]);
-        setIndex(0);
-        return;
-      }
-
-      setTarget(null);
-    }
-    // All I understand is that beforeMatch contains info about a word that is f
-
-    /*
-      const { selection } = editor;
-
-      if (selection && Range.isCollapsed(selection)) {
-        const [start] = Range.edges(selection);
-        const wordBefore = Editor.before(editor, start, { unit: "word" });
-        const before = wordBefore && Editor.before(editor, wordBefore);
-        const beforeRange = before && Editor.range(editor, before, start);
-        const beforeText =
-          beforeRange && Editor.string(editor, beforeRange);
-        const beforeMatch = beforeText && beforeText.match(/^@(\w+)$/);
-        const after = Editor.after(editor, start);
-        const afterRange = Editor.range(editor, start, after);
-        const afterText = Editor.string(editor, afterRange);
-        const afterMatch = afterText.match(/^(\s|$)/);
-
-        if (beforeMatch && afterMatch) {
-          setTarget(beforeRange);
-          setSearch(beforeMatch[1]);
-          setIndex(0);
-          return;
-        }
-      }
-
-      setTarget(null);
-      */
-  };
-
-  return (
-    <div
-      style={{
-        border: "1px solid green"
-      }}
-    >
-      <Slate editor={editor} value={value} onChange={onChange}>
-        {/*  */}
-        <Editable
-          //
-          renderElement={renderElement}
-          onKeyDown={onKeyDown}
-        />
-
-        {target ? <div>opa</div> : null}
-      </Slate>
-    </div>
-  );
+const App = () => {
+  const editor = useEditor({
+    extensions: [
+      StarterKit,
+      Mention.configure({
+        HTMLAttributes: {
+          class: "mention"
+        },
+        suggestion
+      })
+    ],
+    content: "<p>Hello world</p>"
+  });
+  return <EditorContent editor={editor} />;
 };
 
-export default function App() {
+export default App;
+
+const suggestion = {
+  items: ({ query }) => {
+    return [
+      "Lea Thompson",
+      "Cyndi Lauper",
+      "Tom Cruise",
+      "Madonna",
+      "Jerry Hall",
+      "Joan Collins",
+      "Winona Ryder",
+      "Christina Applegate",
+      "Alyssa Milano",
+      "Molly Ringwald",
+      "Ally Sheedy",
+      "Debbie Harry",
+      "Olivia Newton-John",
+      "Elton John",
+      "Michael J. Fox",
+      "Axl Rose",
+      "Emilio Estevez",
+      "Ralph Macchio",
+      "Rob Lowe",
+      "Jennifer Grey",
+      "Mickey Rourke",
+      "John Cusack",
+      "Matthew Broderick",
+      "Justine Bateman",
+      "Lisa Bonet"
+    ]
+      .filter((item) => item.toLowerCase().startsWith(query.toLowerCase()))
+      .slice(0, 5);
+  },
+
+  render: () => {
+    let reactRenderer;
+    let popup;
+
+    return {
+      onStart: (props) => {
+        reactRenderer = new ReactRenderer(MentionList, {
+          props,
+          editor: props.editor
+        });
+
+        popup = tippy("body", {
+          getReferenceClientRect: props.clientRect,
+          appendTo: () => document.body,
+          content: reactRenderer.element,
+          showOnCreate: true,
+          interactive: true,
+          trigger: "manual",
+          placement: "bottom-start"
+        });
+      },
+
+      onUpdate(props) {
+        reactRenderer.updateProps(props);
+
+        popup[0].setProps({
+          getReferenceClientRect: props.clientRect
+        });
+      },
+
+      onKeyDown(props) {
+        if (props.event.key === "Escape") {
+          popup[0].hide();
+
+          return true;
+        }
+
+        return reactRenderer.ref?.onKeyDown(props);
+      },
+
+      onExit() {
+        popup[0].destroy();
+        reactRenderer.destroy();
+      }
+    };
+  }
+};
+
+export const MentionList = forwardRef((props, ref) => {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  const selectItem = (index) => {
+    const item = props.items[index];
+
+    if (item) {
+      props.command({ id: item });
+    }
+  };
+
+  const upHandler = () => {
+    setSelectedIndex(
+      (selectedIndex + props.items.length - 1) % props.items.length
+    );
+  };
+
+  const downHandler = () => {
+    setSelectedIndex((selectedIndex + 1) % props.items.length);
+  };
+
+  const enterHandler = () => {
+    selectItem(selectedIndex);
+  };
+
+  useEffect(() => setSelectedIndex(0), [props.items]);
+
+  useImperativeHandle(ref, () => ({
+    onKeyDown: ({ event }) => {
+      if (event.key === "ArrowUp") {
+        upHandler();
+        return true;
+      }
+
+      if (event.key === "ArrowDown") {
+        downHandler();
+        return true;
+      }
+
+      if (event.key === "Enter") {
+        enterHandler();
+        return true;
+      }
+
+      return false;
+    }
+  }));
+
   return (
-    <div>
-      <div>
-        <span>Try #1 </span>
-
-        <SlateComponent />
-
-        <br />
-
-        <span>Slate's example</span>
-
-        <MentionExample />
-      </div>
+    <div className="items">
+      {props.items.map((item, index) => (
+        <button
+          className={`item ${index === selectedIndex ? "is-selected" : ""}`}
+          key={index}
+          onClick={() => selectItem(index)}
+        >
+          {item}
+        </button>
+      ))}
     </div>
   );
-}
+});

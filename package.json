@@ -8,6 +8,9 @@
   ],
   "main": "src/index.js",
   "dependencies": {
+    "@tiptap/extension-mention": "2.0.0-beta.91",
+    "@tiptap/react": "2.0.0-beta.104",
+    "@tiptap/starter-kit": "2.0.0-beta.165",
     "react": "17.0.2",
     "react-dom": "17.0.2",
     "react-scripts": "4.0.0",
